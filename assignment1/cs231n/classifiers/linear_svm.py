@@ -118,7 +118,7 @@ def svm_loss_vectorized(W, X, y, reg):
     mask[margins > 0] = 1
     # for each sample, find the total number of classes where margin > 0
     incorrect_counts = np.sum(mask, axis=1)
-    #
+
     mask[np.arange(num_train), y] = -1*incorrect_counts
     dW = X.T.dot(mask)
 
