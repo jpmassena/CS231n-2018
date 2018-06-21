@@ -16,18 +16,19 @@ class LinearClassifier(object):
         Train this linear classifier using stochastic gradient descent.
 
         Inputs:
-        - X: A numpy array of shape (N, D) containing training data; there are N
-          training samples each of dimension D.
+        - X: A numpy array of shape (N, D) containing training data; there are
+          N training samples each of dimension D.
         - y: A numpy array of shape (N,) containing training labels; y[i] = c
           means that X[i] has label 0 <= c < C for C classes.
         - learning_rate: (float) learning rate for optimization.
         - reg: (float) regularization strength.
         - num_iters: (integer) number of steps to take when optimizing
-        - batch_size: (integer) number of training examples to use at each step.
+        - batch_size: (integer) number of training examples to use at each step
         - verbose: (boolean) If true, print progress during optimization.
 
         Outputs:
-        A list containing the value of the loss function at each training iteration.
+        A list containing the value of the loss function at each training
+        iteration.
         """
         num_train, dim = X.shape
         # assume y takes values 0...K-1 where K is number of classes
@@ -41,37 +42,37 @@ class LinearClassifier(object):
         for it in range(num_iters):
             X_batch = None
             y_batch = None
-            #########################################################################
-            # TODO:                                                                 #
-            # Sample batch_size elements from the training data and their           #
-            # corresponding labels to use in this round of gradient descent.        #
-            # Store the data in X_batch and their corresponding labels in           #
-            # y_batch; after sampling X_batch should have shape (dim, batch_size)   #
-            # and y_batch should have shape (batch_size,)                           #
-            #                                                                       #
-            # Hint: Use np.random.choice to generate indices. Sampling with         #
-            # replacement is faster than sampling without replacement.              #
-            #########################################################################
+            ###################################################################
+            # TODO:                                                           #
+            # Sample batch_size elements from the training data and their     #
+            # corresponding labels to use in this round of gradient descent.  #
+            # Store the data in X_batch and their corresponding labels in     #
+            # y_batch; after sampling X_batch should have shape               #
+            # (dim, batch_size) and y_batch should have shape (batch_size,)   #
+            #                                                                 #
+            # Hint: Use np.random.choice to generate indices. Sampling with   #
+            # replacement is faster than sampling without replacement.        #
+            ###################################################################
             sample_idx = np.random.choice(dim, batch_size, replace=True)
             X_batch = X[sample_idx]
             y_batch = y[sample_idx]
-            #########################################################################
-            #                       END OF YOUR CODE                                #
-            #########################################################################
+            ###################################################################
+            #                       END OF YOUR CODE                          #
+            ###################################################################
 
             # evaluate loss and gradient
             loss, grad = self.loss(X_batch, y_batch, reg)
             loss_history.append(loss)
 
             # perform parameter update
-            #########################################################################
-            # TODO:                                                                 #
-            # Update the weights using the gradient and the learning rate.          #
-            #########################################################################
+            ###################################################################
+            # TODO:                                                           #
+            # Update the weights using the gradient and the learning rate.    #
+            ###################################################################
             self.W += - grad * learning_rate
-            #########################################################################
-            #                       END OF YOUR CODE                                #
-            #########################################################################
+            ###################################################################
+            #                       END OF YOUR CODE                          #
+            ###################################################################
 
             if verbose and it % 100 == 0:
                 print('iteration %d / %d: loss %f' % (it, num_iters, loss))
@@ -84,24 +85,24 @@ class LinearClassifier(object):
         data points.
 
         Inputs:
-        - X: A numpy array of shape (N, D) containing training data; there are N
-          training samples each of dimension D.
+        - X: A numpy array of shape (N, D) containing training data; there are
+          N training samples each of dimension D.
 
         Returns:
         - y_pred: Predicted labels for the data in X. y_pred is a 1-dimensional
-          array of length N, and each element is an integer giving the predicted
-          class.
+          array of length N, and each element is an integer giving the
+          predicted class.
         """
         y_pred = np.zeros(X.shape[0])
-        ###########################################################################
-        # TODO:                                                                   #
-        # Implement this method. Store the predicted labels in y_pred.            #
-        ###########################################################################
+        #######################################################################
+        # TODO:                                                               #
+        # Implement this method. Store the predicted labels in y_pred.        #
+        #######################################################################
         scores = X.dot(self.W)
         y_pred = np.argmax(scores, axis=1)
-        ###########################################################################
-        #                           END OF YOUR CODE                              #
-        ###########################################################################
+        #######################################################################
+        #                           END OF YOUR CODE                          #
+        #######################################################################
         return y_pred
 
     def loss(self, X_batch, y_batch, reg):
@@ -112,7 +113,8 @@ class LinearClassifier(object):
         Inputs:
         - X_batch: A numpy array of shape (N, D) containing a minibatch of N
           data points; each point has dimension D.
-        - y_batch: A numpy array of shape (N,) containing labels for the minibatch.
+        - y_batch: A numpy array of shape (N,) containing labels for the
+          minibatch.
         - reg: (float) regularization strength.
 
         Returns: A tuple containing:
