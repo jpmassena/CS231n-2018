@@ -114,3 +114,4 @@ ENV/
 .env/*
 /assignment1/cs231n/datasets
 /assignment1/.ipynb_checkpoints
+/assignment2/cs231n/datasets
