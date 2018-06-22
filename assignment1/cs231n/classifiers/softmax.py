@@ -79,7 +79,7 @@ def softmax_loss_vectorized(W, X, y, reg):
     # scores have number of examples rows and classes columns
     scores = X.dot(W)
     scores -= np.max(scores)  # trick that control number instability
-    
+
     # num_train = inputs count
     # y = correct class
     # this gives the correct class score for each example
@@ -90,16 +90,16 @@ def softmax_loss_vectorized(W, X, y, reg):
     # loss is mean of sum of losses for all examples + REG
     # loss = - correct_score + log(sum(exp(scores)))
     # or
-    # loss = - log(exp(correct_score)/sum(exp(scores)))    
+    # loss = - log(exp(correct_score)/sum(exp(scores)))
     loss = np.sum(- correct_class_score + np.log(exp_sum))
 
     softmax = np.exp(scores) / exp_sum
     # when the class is the correct, we add -1 because of the formula
     grad = softmax
-    grad[np.arange(num_train),y] -= 1
-    
+    grad[np.arange(num_train), y] -= 1
+
     dW = X.T.dot(grad)
-        
+
     loss /= num_train
     dW /= num_train
 
