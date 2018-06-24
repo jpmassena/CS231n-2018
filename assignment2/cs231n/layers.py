@@ -212,17 +212,18 @@ def batchnorm_forward(x, gamma, beta, bn_param):
 
         # Step 5 - ~Standard Deviation = sqrt(variance)
         std = np.sqrt(sample_var + eps)
+        
 
         # Step 6 & 7 - Invert the std and Normalize the batch
         # Step 6 = 1/std
-        x_hat = x_centered * 1. / std
+        i_std = 1./std
+        x_hat = x_centered * i_std
 
         # Step 8 & 9 - Calculate linear output
         # Step 8 = gamma * x_hat // Step 9 = step8 + beta
         out = gamma * x_hat + beta
 
-        cache = (x_hat, gamma, x_centered, std,
-                 sample_mean, sample_var, eps, x)
+        cache = (x_hat, gamma, x_centered, std, i_std)
 
         running_mean = momentum * running_mean + (1 - momentum) * sample_mean
         running_var = momentum * running_var + (1 - momentum) * sample_var
@@ -249,7 +250,6 @@ def batchnorm_forward(x, gamma, beta, bn_param):
     # Store the updated running means back into bn_param
     bn_param['running_mean'] = running_mean
     bn_param['running_var'] = running_var
-
     return out, cache
 
 
@@ -281,7 +281,7 @@ def batchnorm_backward(dout, cache):
     N, D = dout.shape
 
     # cache = (x_hat, gamma, x_centered, std, sample_var, eps)
-    x_hat, gamma, x_centered, std = cache
+    x_hat, gamma, x_centered, std, i_std = cache
 
     # Gradient at step 9
     dbeta = np.sum(dout, axis=0)  # (D,)
@@ -291,7 +291,7 @@ def batchnorm_backward(dout, cache):
     d_x_hat = dout * gamma  # (N,D)
 
     # Gradient at step 7
-    d_x_centered = d_x_hat * (1/std)  # (N,D)
+    d_x_centered = d_x_hat * (i_std)  # (N,D)
     d_i_var = np.sum(d_x_hat * x_centered, axis=0)  # (D,)
 
     # Gradient at step 6 - We continue to go backward in the denominator
@@ -348,7 +348,7 @@ def batchnorm_backward_alt(dout, cache):
     # single statement; our implementation fits on a single 80-character line.#
     ###########################################################################
 
-    x_hat, gamma, x_centered, std = cache
+    x_hat, gamma, x_centered, std, i_std = cache
     N, D = dout.shape
 
     dbeta = dout.sum(0)  # (D,)
@@ -357,7 +357,7 @@ def batchnorm_backward_alt(dout, cache):
     d_x_hat = dout * gamma  # (N,D)
 
     # https://kevinzakka.github.io/2016/09/14/batch_normalization/
-    dx = (1./N) * 1/std * (N * d_x_hat - np.sum(d_x_hat, axis=0) -
+    dx = (1./N) * i_std * (N * d_x_hat - np.sum(d_x_hat, axis=0) -
                            x_hat * np.sum(d_x_hat * x_hat, axis=0))
 
     ###########################################################################
