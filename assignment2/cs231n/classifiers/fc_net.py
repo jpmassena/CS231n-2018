@@ -184,8 +184,11 @@ def affine_batchnorm_relu_backward(dout, cache):
     Backward pass for the affine-batchnorm-relu convenience layer
     """
     fc_cache, bn_cache, relu_cache = cache
+    # print("relu_backward")
     da = relu_backward(dout, relu_cache)
-    d_bn, dgamma, dbeta = batchnorm_backward_alt(da, bn_cache)
+    # print("batchnorm_backward")
+    d_bn, dgamma, dbeta = batchnorm_backward(da, bn_cache)
+    # print("affine_backward")
     dx, dw, db = affine_backward(d_bn, fc_cache)
     return dx, dw, db, dgamma, dbeta
 
@@ -276,7 +279,6 @@ class FullyConnectedNet(object):
                     layer_dims[layer+1])
                 self.params['beta'+str(layer+1)] = np.zeros(
                     layer_dims[layer+1])
-
         ############################################################################
         #                             END OF YOUR CODE                             #
         ############################################################################
@@ -338,30 +340,37 @@ class FullyConnectedNet(object):
 
         x = X  # layer input
         grad_caches = []  # intermediate results to compute gradient later
-
+        drop_caches = []
         # For each layer, except the last, do affine-relu forward pass. Store
         # the intermediate results in the Cache
         for layer in range(self.num_layers-1):
             W = self.params['W'+str(layer+1)]
             b = self.params['b'+str(layer+1)]
             if self.normalization is None:
+                # print("af_relu_forward {} with W{}".format(layer,layer+1))
                 x, cache = affine_relu_forward(x, W, b)
             else:
                 gamma = self.params['gamma'+str(layer+1)]
                 beta = self.params['beta'+str(layer+1)]
 
                 if self.normalization == 'batchnorm':
+                    # print("af_bn_relu_forward {} with W{} and gamma{}".format(layer,layer+1,layer+1))
                     x, cache = affine_batchnorm_relu_forward(
                         x, W, b, gamma, beta, self.bn_params[layer])
                 else:
+                    # print("af_ln_relu_forward {} with W{}".format(layer,layer+1))
                     x, cache = affine_layernorm_relu_forward(
                         x, W, b, gamma, beta, self.bn_params[layer])
+            if self.use_dropout:
+                x, drop_cache = dropout_forward(x, self.dropout_param)
+                drop_caches.append(drop_cache)
 
             grad_caches.append(cache)
 
         # Calculate the output scores with the last layer's weights
         W = self.params['W'+str(self.num_layers)]
         b = self.params['b'+str(self.num_layers)]
+        # print("affine_forward {} with W{}".format(self.num_layers-1,self.num_layers))
         scores, cache = affine_forward(x, W, b)
         grad_caches.append(cache)
 
@@ -395,8 +404,9 @@ class FullyConnectedNet(object):
             self.params['W'+str(self.num_layers)]**2)
 
         # Gradients of the last affine layer
+        # print("affine_backward cache{}".format(len(grad_caches)))
         last_d_x, last_d_w, last_d_b = affine_backward(d_out, grad_caches[-1])
-
+        # print("update W{}".format(self.num_layers))
         grads['W'+str(self.num_layers)] = last_d_w + self.reg * \
             self.params['W'+str(self.num_layers)]
         grads['b'+str(self.num_layers)] = last_d_b
@@ -407,22 +417,28 @@ class FullyConnectedNet(object):
         for layer in range(self.num_layers-2, -1, -1):
             # Do L2 regularization
             loss += 0.5 * self.reg * np.sum(self.params['W'+str(layer+1)]**2)
-
+            # print("cache{}".format(layer+1))
             if self.normalization is None:
+                if self.use_dropout:
+                    d_out = dropout_backward(d_out, drop_caches[layer])
                 d_x, d_w, d_b = affine_relu_backward(d_out, grad_caches[layer])
             else:
                 if self.normalization == 'batchnorm':
+                    if self.use_dropout:
+                        d_out = dropout_backward(d_out, drop_caches[layer])
                     d_x, d_w, d_b, d_gamma, d_beta = \
                         affine_batchnorm_relu_backward(
                             d_out, grad_caches[layer])
                 else:
+                    if self.use_dropout:
+                        d_out = dropout_backward(d_out, drop_caches[layer])
                     d_x, d_w, d_b, d_gamma, d_beta = \
                         affine_layernorm_relu_backward(
                             d_out, grad_caches[layer])
-
+                # print("update gamma{}".format(layer+1))
                 grads['gamma'+str(layer+1)] = d_gamma
                 grads['beta'+str(layer+1)] = d_beta
-
+            # print("update W{}".format(layer+1))
             grads['W'+str(layer+1)] = d_w + self.reg * \
                 self.params['W'+str(layer+1)]
             grads['b'+str(layer+1)] = d_b
