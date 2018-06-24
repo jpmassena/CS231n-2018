@@ -60,18 +60,17 @@ def affine_backward(dout, cache):
     ###########################################################################
     # TODO: Implement the affine backward pass.                               #
     ###########################################################################
-    
+
     N = x.shape[0]  # Number of example inputs N
     # Reshape N x (d_1, ..., d_k) to N x (d_1 x ... x d_k)
     X = x.reshape(N, np.prod(x.shape[1:]))  # (N x D)
-    
+
     db = np.sum(dout, axis=0)  # bias gradient (M)
 
     dw = X.T.dot(dout)  # weight gradient (D, M)
 
     dx = dout.dot(w.T)  # input gradient
     dx = dx.reshape(x.shape)  # (N, d1, ..., d_k)
-    
 
     ###########################################################################
     #                             END OF YOUR CODE                            #
@@ -94,8 +93,8 @@ def relu_forward(x):
     ###########################################################################
     # TODO: Implement the ReLU forward pass.                                  #
     ###########################################################################
-    
-    out = np.maximum(0, x) # ReLU
+
+    out = np.maximum(0, x)  # ReLU
 
     ###########################################################################
     #                             END OF YOUR CODE                            #
@@ -119,10 +118,10 @@ def relu_backward(dout, cache):
     ###########################################################################
     # TODO: Implement the ReLU backward pass.                                 #
     ###########################################################################
-    
+
     # gradient of ReLU is 1 if > 0 and 0 otherwise
     dx = dout * (np.maximum(0, x) > 0)
-    
+
     ###########################################################################
     #                             END OF YOUR CODE                            #
     ###########################################################################
@@ -198,7 +197,35 @@ def batchnorm_forward(x, gamma, beta, bn_param):
         # Referencing the original paper (https://arxiv.org/abs/1502.03167)   #
         # might prove to be helpful.                                          #
         #######################################################################
-        pass
+
+        # axis 0 to get mean and var by dimension and not by example
+
+        # Step 1 - Batch mean: 1/N * sum(x)
+        sample_mean = x.mean(0)  # (D,)
+
+        # Step 2 - Center x around mean
+        x_centered = x - sample_mean  # (N, D)
+
+        # Step 3 & 4 - Batch var: 1/N * sum(x_centered^2)
+        # Step 3 = x_centered^2 // Step 4 = 1/N * sum(step3)
+        sample_var = x.var(0)  # (D,)
+
+        # Step 5 - ~Standard Deviation = sqrt(variance)
+        std = np.sqrt(sample_var + eps)
+
+        # Step 6 & 7 - Invert the std and Normalize the batch
+        # Step 6 = 1/std
+        x_hat = x_centered * 1. / std
+
+        # Step 8 & 9 - Calculate linear output
+        # Step 8 = gamma * x_hat // Step 9 = step8 + beta
+        out = gamma * x_hat + beta
+
+        cache = (x_hat, gamma, x_centered, std,
+                 sample_mean, sample_var, eps, x)
+
+        running_mean = momentum * running_mean + (1 - momentum) * sample_mean
+        running_var = momentum * running_var + (1 - momentum) * sample_var
         #######################################################################
         #                           END OF YOUR CODE                          #
         #######################################################################
@@ -209,7 +236,10 @@ def batchnorm_forward(x, gamma, beta, bn_param):
         # then scale and shift the normalized data using gamma and beta.      #
         # Store the result in the out variable.                               #
         #######################################################################
-        pass
+
+        sample_normalize = (x - running_mean) / np.sqrt(running_var + eps)
+        out = gamma * sample_normalize + beta
+
         #######################################################################
         #                          END OF YOUR CODE                           #
         #######################################################################
@@ -247,7 +277,46 @@ def batchnorm_backward(dout, cache):
     # Referencing the original paper (https://arxiv.org/abs/1502.03167)       #
     # might prove to be helpful.                                              #
     ###########################################################################
-    pass
+
+    N, D = dout.shape
+
+    # cache = (x_hat, gamma, x_centered, std, sample_var, eps)
+    x_hat, gamma, x_centered, std = cache
+
+    # Gradient at step 9
+    dbeta = np.sum(dout, axis=0)  # (D,)
+
+    # Gradient at step 8
+    dgamma = np.sum(x_hat * dout, axis=0)  # (D,)
+    d_x_hat = dout * gamma  # (N,D)
+
+    # Gradient at step 7
+    d_x_centered = d_x_hat * (1/std)  # (N,D)
+    d_i_var = np.sum(d_x_hat * x_centered, axis=0)  # (D,)
+
+    # Gradient at step 6 - We continue to go backward in the denominator
+    d_std = d_i_var * (-1 / std**2)  # (D,)
+
+    # Gradient at step 5
+    d_var = d_std * (1/(2*std))  # (D,)
+
+    # Gradient at step 4
+    # var is 1/N sum of something(next step) and gradient of sum = 1*
+    d_var = d_var * 1/N * np.ones((N, D))  # (N, D)
+
+    # Gradient at step 3
+    d_squared = d_var * 2 * x_centered  # (D,)
+
+    # Gradient at step 2 - In this node, we have 2 gradients coming, so we add
+    # them
+    d_x1 = d_squared + d_x_centered  # (N, D)
+    d_mean = -1 * np.sum(d_squared + d_x_centered, axis=0)  # (D,)
+
+    # Gradient at step 1
+    d_x2 = d_mean * 1/N * np.ones(dout.shape)
+
+    dx = d_x1 + d_x2
+
     ###########################################################################
     #                             END OF YOUR CODE                            #
     ###########################################################################
@@ -261,7 +330,7 @@ def batchnorm_backward_alt(dout, cache):
 
     For this implementation you should work out the derivatives for the batch
     normalizaton backward pass on paper and simplify as much as possible. You
-    should be able to derive a simple expression for the backward pass. 
+    should be able to derive a simple expression for the backward pass.
     See the jupyter notebook for more hints.
 
     Note: This implementation should expect to receive the same cache variable
@@ -278,7 +347,19 @@ def batchnorm_backward_alt(dout, cache):
     # should be able to compute gradients with respect to the inputs in a     #
     # single statement; our implementation fits on a single 80-character line.#
     ###########################################################################
-    pass
+
+    x_hat, gamma, x_centered, std = cache
+    N, D = dout.shape
+
+    dbeta = dout.sum(0)  # (D,)
+    dgamma = np.sum(dout * x_hat, axis=0)  # (D,)
+
+    d_x_hat = dout * gamma  # (N,D)
+
+    # https://kevinzakka.github.io/2016/09/14/batch_normalization/
+    dx = (1./N) * 1/std * (N * d_x_hat - np.sum(d_x_hat, axis=0) -
+                           x_hat * np.sum(d_x_hat * x_hat, axis=0))
+
     ###########################################################################
     #                             END OF YOUR CODE                            #
     ###########################################################################
@@ -455,7 +536,7 @@ def conv_forward_naive(x, w, b, conv_param):
     - conv_param: A dictionary with the following keys:
       - 'stride': The number of pixels between adjacent receptive fields in the
         horizontal and vertical directions.
-      - 'pad': The number of pixels that will be used to zero-pad the input. 
+      - 'pad': The number of pixels that will be used to zero-pad the input.
 
 
     During padding, 'pad' zeros should be placed symmetrically (i.e equally on both sides)
@@ -516,7 +597,7 @@ def max_pool_forward_naive(x, pool_param):
       - 'pool_width': The width of each pooling region
       - 'stride': The distance between adjacent pooling regions
 
-    No padding is necessary here. Output size is given by 
+    No padding is necessary here. Output size is given by
 
     Returns a tuple of:
     - out: Output data, of shape (N, C, H', W') where H' and W' are given by
@@ -630,7 +711,7 @@ def spatial_batchnorm_backward(dout, cache):
 def spatial_groupnorm_forward(x, gamma, beta, G, gn_param):
     """
     Computes the forward pass for spatial group normalization.
-    In contrast to layer normalization, group normalization splits each entry 
+    In contrast to layer normalization, group normalization splits each entry
     in the data into G contiguous pieces, which it then normalizes independently.
     Per feature shifting and scaling are then applied to the data, in a manner identical to that of batch normalization and layer normalization.
 
