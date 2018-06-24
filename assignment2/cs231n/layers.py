@@ -212,7 +212,6 @@ def batchnorm_forward(x, gamma, beta, bn_param):
 
         # Step 5 - ~Standard Deviation = sqrt(variance)
         std = np.sqrt(sample_var + eps)
-        
 
         # Step 6 & 7 - Invert the std and Normalize the batch
         # Step 6 = 1/std
@@ -401,7 +400,35 @@ def layernorm_forward(x, gamma, beta, ln_param):
     # transformations you could perform, that would enable you to copy over   #
     # the batch norm code and leave it almost unchanged?                      #
     ###########################################################################
-    pass
+
+    x = x.T  # we only need to transpose X to keep all code from batch_norm
+
+    # Step 1 - Batch mean: 1/N * sum(x)
+    sample_mean = x.mean(0)  # (N,)
+
+    # Step 2 - Center x around mean
+    x_centered = x - sample_mean  # (D, N)
+
+    # Step 3 & 4 - Batch var: 1/N * sum(x_centered^2)
+    # Step 3 = x_centered^2 // Step 4 = 1/N * sum(step3)
+    sample_var = x.var(0)  # (N,)
+
+    # Step 5 - ~Standard Deviation = sqrt(variance)
+    std = np.sqrt(sample_var + eps)  # (N,)
+
+    # Step 6 & 7 - Invert the std and Normalize the batch
+    # Step 6 = 1/std
+    i_std = 1./std  # (N,)
+    x_hat = x_centered * i_std  # (D,N)
+
+    # Transpose back, now shape of xhat (N, D)
+    x_hat = x_hat.T
+
+    # Step 8 & 9 - Calculate linear output
+    # Step 8 = gamma * x_hat // Step 9 = step8 + beta
+    out = gamma * x_hat + beta
+
+    cache = (x_hat, gamma, x_centered, std, i_std)
     ###########################################################################
     #                             END OF YOUR CODE                            #
     ###########################################################################
@@ -432,11 +459,28 @@ def layernorm_backward(dout, cache):
     # implementation of batch normalization. The hints to the forward pass    #
     # still apply!                                                            #
     ###########################################################################
-    pass
+    x_hat, gamma, x_centered, std, i_std = cache
+
+    dbeta = dout.sum(0)  # (D,)
+    dgamma = np.sum(dout * x_hat, axis=0)  # (D,)
+
+    d_x_hat = dout * gamma  # (N,D)
+
+    # Transpose dxhat and xhat back
+    d_x_hat = d_x_hat.T
+    x_hat = x_hat.T
+
+    # Actually x_hat's shape is (D, N), we use notation (N, D) to let us copy
+    # batch normalization backward code when computing dx without changes
+    N, D = x_hat.shape
+
+    # https://kevinzakka.github.io/2016/09/14/batch_normalization/
+    dx = (1./N) * i_std * (N * d_x_hat - np.sum(d_x_hat, axis=0) -
+                           x_hat * np.sum(d_x_hat * x_hat, axis=0))
     ###########################################################################
     #                             END OF YOUR CODE                            #
     ###########################################################################
-    return dx, dgamma, dbeta
+    return dx.T, dgamma, dbeta
 
 
 def dropout_forward(x, dropout_param):
