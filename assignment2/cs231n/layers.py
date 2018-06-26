@@ -965,11 +965,13 @@ def spatial_groupnorm_backward(dout, cache):
 
     d_x_hat = dout * gamma  # (N, C, H, W)
 
-    # Reshape to minimize code change and transpose
+    # Reshape to replicate forward pass dimensions
     g_d_x_hat = d_x_hat.reshape(N, G, C//G, H, W)
     g_x_hat = x_hat.reshape(N, G, C//G, H, W)
 
     # We want the dimensions we used to compute mean and var
+    # This way we only need to change the dimensions indexes below from
+    # the layernorm equation
     N1 = (C//G) * H * W
 
     # https://kevinzakka.github.io/2016/09/14/batch_normalization/
