@@ -74,7 +74,6 @@ class CaptioningRNN(object):
         for k, v in self.params.items():
             self.params[k] = v.astype(self.dtype)
 
-
     def loss(self, features, captions):
         """
         Compute training-time loss for the RNN. We input image features and
@@ -140,13 +139,47 @@ class CaptioningRNN(object):
         # Note also that you are allowed to make use of functions from layers.py   #
         # in your implementation, if needed.                                       #
         ############################################################################
-        pass
+        # Forward pass
+
+        # (1)
+        h0, cache_init = affine_forward(features, W_proj, b_proj)
+
+        # (2)
+        captions_embed, cache_embed = word_embedding_forward(
+            captions_in, W_embed)
+
+        # (3)
+        hidden_rnn, cache_rnn = rnn_forward(captions_embed, h0, Wx, Wh, b)
+
+        # (4)
+        scores, cache_scores = temporal_affine_forward(
+            hidden_rnn, W_vocab, b_vocab)
+
+        # (5)
+        loss, d_scores = temporal_softmax_loss(scores, captions_out, mask)
+
+        # Backward pass
+        # (4)
+        d_hidden_rnn, grads['W_vocab'], grads['b_vocab'] = temporal_affine_backward(
+            d_scores, cache_scores)
+
+        # (3)
+        d_captions_embed, d_h0, grads['Wx'], grads['Wh'], grads['b'] = rnn_backward(
+            d_hidden_rnn, cache_rnn)
+
+        # (2)
+        grads['W_embed'] = word_embedding_backward(
+            d_captions_embed, cache_embed)
+
+        # (1)
+        d_x, grads['W_proj'], grads['b_proj'] = affine_backward(
+            d_h0, cache_init)
+
         ############################################################################
         #                             END OF YOUR CODE                             #
         ############################################################################
 
         return loss, grads
-
 
     def sample(self, features, max_length=30):
         """
