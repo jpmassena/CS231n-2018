@@ -149,7 +149,10 @@ class CaptioningRNN(object):
             captions_in, W_embed)
 
         # (3)
-        hidden_rnn, cache_rnn = rnn_forward(captions_embed, h0, Wx, Wh, b)
+        if self.cell_type == 'rnn':
+            hidden_rnn, cache_rnn = rnn_forward(captions_embed, h0, Wx, Wh, b)
+        elif self.cell_type == 'lstm':
+            hidden_rnn, cache_rnn = lstm_forward(captions_embed, h0, Wx, Wh, b)
 
         # (4)
         scores, cache_scores = temporal_affine_forward(
@@ -164,8 +167,12 @@ class CaptioningRNN(object):
             d_scores, cache_scores)
 
         # (3)
-        d_captions_embed, d_h0, grads['Wx'], grads['Wh'], grads['b'] = rnn_backward(
-            d_hidden_rnn, cache_rnn)
+        if self.cell_type == 'rnn':
+            d_captions_embed, d_h0, grads['Wx'], grads['Wh'], grads['b'] = rnn_backward(
+                d_hidden_rnn, cache_rnn)
+        elif self.cell_type == 'lstm':
+            d_captions_embed, d_h0, grads['Wx'], grads['Wh'], grads['b'] = lstm_backward(
+                d_hidden_rnn, cache_rnn)
 
         # (2)
         grads['W_embed'] = word_embedding_backward(
@@ -238,7 +245,31 @@ class CaptioningRNN(object):
         # NOTE: we are still working over minibatches in this function. Also if   #
         # you are using an LSTM, initialize the first cell state to zeros.        #
         ###########################################################################
-        pass
+        for t in range(max_length):
+            # (1) Embed the previous word using the learned word embeddings
+            if t == 0:
+                word_idx = self._start
+            x_embed = W_embed[word_idx, :]
+            # (2) Make an RNN step using the previous hidden state and the
+            # embedded current word to get the next hidden state.
+            if t == 0:
+                h0 = features.dot(W_proj) + b_proj
+                next_h = h0
+                next_c = np.zeros(next_h.shape)
+            if self.cell_type == 'rnn':
+                next_h, _ = rnn_step_forward(x_embed, next_h, Wx, Wh, b)
+            elif self.cell_type == 'lstm':
+                next_h, next_c, _ = lstm_step_forward(
+                    x_embed, next_h, next_c, Wx, Wh, b)
+            # (3) Apply the learned affine transformation to the next hidden
+            # state to get scores for all words in the vocabulary
+            out = next_h.dot(W_vocab) + b_vocab
+            # (4) Select the word with the highest score as the next word,
+            # writing it (the word index) to the appropriate slot in the
+            # captions variable
+            word_idx = np.argmax(out, axis=1)
+            captions[:, t] = word_idx
+
         ############################################################################
         #                             END OF YOUR CODE                             #
         ############################################################################
