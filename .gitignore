@@ -116,3 +116,4 @@ ENV/
 /assignment1/.ipynb_checkpoints
 /assignment2/cs231n/datasets
 /assignment3/cs231n/datasets
+/assignment3/cs231n/gradient_check.py
