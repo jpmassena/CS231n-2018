@@ -30,8 +30,8 @@ The material of the course can be found in the following links:
 
 ## [Assignment 3](http://cs231n.github.io/assignments2018/assignment3/)
 
-* [Q1: Image Captioning with Vanilla RNNs](./assignment2/RNN_Captioning.ipynb)
-* [Q2: Image Captioning with LSTMs](./assignment2/LSTM_Captioning.ipynb)
-* [Q3: Network Visualization: Saliency maps, Class Visualization, and Fooling Images](./assignment2/NetworkVisualization-PyTorch.ipynb)
-* [Q4: Style Transfer](./assignment2/StyleTransfer-PyTorch.ipynb)
-* [Q5: Generative Adversarial Networks](./assignment2/GANs-PyTorch.ipynb)
+* [Q1: Image Captioning with Vanilla RNNs](./assignment3/RNN_Captioning.ipynb)
+* [Q2: Image Captioning with LSTMs](./assignment3/LSTM_Captioning.ipynb)
+* [Q3: Network Visualization: Saliency maps, Class Visualization, and Fooling Images](./assignment3/NetworkVisualization-PyTorch.ipynb)
+* [Q4: Style Transfer](./assignment3/StyleTransfer-PyTorch.ipynb)
+* [Q5: Generative Adversarial Networks](./assignment3/GANs-PyTorch.ipynb)
